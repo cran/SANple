@@ -1,52 +1,54 @@
-#' Sample fSAN 
+#' Sample fSAN with sparse mixtures
 #' 
-#' @description \code{sample_fSAN} is used to perform posterior inference under the finite shared atoms nested (fSAN) model with Gaussian likelihood (originally proposed in D'Angelo et al., 2023). 
-#' The model uses Dirichlet mixtures with an unknown number of components (following the specification of Frühwirth-Schnatter et al., 2021) at both the observational and distributional level.
+#' @description \code{sample_fSAN_sparsemix} is used to perform posterior inference under the finite shared atoms nested (fSAN) model with Gaussian likelihood (originally proposed in D'Angelo et al., 2023). 
+#' The model uses overfitted (sparse) Dirichlet mixtures (Malsiner-Walli et al., 2016) at both the observational and distributional level.
 #' 
 #' 
 #' @usage 
-#' sample_fSAN(nrep, y, group, 
-#'             maxK = 50, maxL = 50, 
-#'             m0 = 0, tau0 = 0.1, lambda0 = 3, gamma0 = 2,
-#'             hyp_alpha1 = 6, hyp_alpha2 = 3, 
-#'             hyp_beta1 = 6, hyp_beta2 = 3, 
-#'             eps_alpha = NULL, eps_beta = NULL,
-#'             alpha = NULL, beta = NULL,
-#'             warmstart = TRUE, nclus_start = NULL,
-#'             mu_start = NULL, sigma2_start = NULL,
-#'             M_start = NULL, S_start = NULL,
-#'             alpha_start = NULL, beta_start = NULL,
-#'             progress = TRUE, seed = NULL)
+#' sample_fSAN_sparsemix(nrep, burn, y, group, 
+#'                maxK = 50, maxL = 50, 
+#'                m0 = 0, tau0 = 0.1, lambda0 = 3, gamma0 = 2,
+#'                hyp_alpha = 10, hyp_beta = 10, 
+#'                eps_alpha = NULL, eps_beta = NULL,
+#'                alpha = NULL, beta = NULL,
+#'                warmstart = TRUE, nclus_start = NULL,
+#'                mu_start = NULL, sigma2_start = NULL, 
+#'                M_start = NULL, S_start = NULL,
+#'                alpha_start = NULL, beta_start = NULL,
+#'                progress = TRUE, seed = NULL)
 #' 
 #' 
 #' @param nrep Number of MCMC iterations.
+#' @param burn Number of discarded iterations.
 #' @param y Vector of observations.
 #' @param group Vector of the same length of y indicating the group membership (numeric).
 #' @param maxK Maximum number of distributional clusters \eqn{K} (default = 50).
 #' @param maxL Maximum number of observational clusters \eqn{L} (default = 50).
 #' @param m0,tau0,lambda0,gamma0 Hyperparameters on \eqn{(\mu, \sigma^2) \sim NIG(m_0, \tau_0, \lambda_0,\gamma_0)}. Default is (0, 0.1, 3, 2).
-#' @param hyp_alpha1,hyp_alpha2,eps_alpha If a random \eqn{\alpha} is used, (\code{hyp_alpha1},\code{hyp_alpha2}) specify the hyperparameters (default = (6,3)).
-#' The prior is \eqn{\alpha\sim Gamma}(\code{hyp_alpha1}, \code{hyp_alpha2}). In this case, \code{eps_alpha} is the tuning parameter of the MH step.
-#' @param hyp_beta1,hyp_beta2,eps_beta If a random \eqn{\beta} is used, (\code{hyp_beta1},\code{hyp_beta2}) specifies the hyperparameter (default = (6,3)). 
-#' The prior is \eqn{\beta\sim Gamma}(\code{hyp_beta1}, \code{hyp_beta2}). In this case, \code{eps_beta} is the tuning parameter of the MH step.
-#' @param alpha Distributional Dirichlet parameter if fixed (optional). The distribution is Dirichlet( \code{rep(alpha/maxK, maxK)} ).
-#' @param beta Observational Dirichlet parameter if fixed (optional). The distribution is Dirichlet( \code{rep(beta/maxL, maxL)} ).
+#' @param hyp_alpha,eps_alpha If a random \eqn{\alpha} is used, \code{hyp_alpha} specifies the hyperparameter (default = 10).
+#' The prior is \eqn{\alpha} ~ Gamma(\code{hyp_alpha}, \code{hyp_alpha*maxK}),
+#' following Malsiner-Walli et al. (2016). In this case, \code{eps_alpha} is the tuning parameter of the MH step.
+#' @param hyp_beta,eps_beta If a random \eqn{\beta} is used, \code{hyp_beta} specifies the hyperparameter (default = 10). 
+#' The prior is \eqn{\beta} ~ Gamma(\code{hyp_beta}, \code{hyp_beta*maxL}),
+#' following Malsiner-Walli et al. (2016). In this case, \code{eps_beta} is the tuning parameter of the MH step.
+#' @param alpha Distributional Dirichlet parameter if fixed (optional). The distribution is Dirichlet( \code{rep(alpha, maxK)} ).
+#' @param beta Observational Dirichlet parameter if fixed (optional). The distribution is Dirichlet( \code{rep(beta, maxL)} ).
 #' @param warmstart,nclus_start Initialization of the observational clustering. 
 #' \code{warmstart} is logical parameter (default = \code{TRUE}) of whether a kmeans clustering should be used to initialize the chains.
-#' An initial guess of the number of observational clusters can be passed via the \code{nclus_start} parameter (optional). Default is \code{nclus_start = min(c(maxL, 30))}.
-#' @param mu_start,sigma2_start,M_start,S_start,alpha_start,beta_start Starting points of the MCMC chains (optional). 
+#' An initial guess of the number of observational clusters can be passed via the \code{nclus_start} parameter (optional)
+#' @param mu_start,sigma2_start,M_start,S_start,alpha_start,beta_start Starting points of the MCMC chains (optional). Default is \code{nclus_start = min(c(maxL, 30))}.
 #' \code{mu_start, sigma2_start} are vectors of length \code{maxL}. 
 #' \code{M_start} is a vector of observational cluster allocation of length N.
 #' \code{S_start} is a vector of observational cluster allocation of length J.
 #' \code{alpha_start, alpha_start} are numeric. 
-#' @param progress show a progress bar? (logical, default TRUE.)
+#' @param progress show a progress bar? (logical, default TRUE).
 #' @param seed set a fixed seed.
 #'
 #'
 #' @details 
 #' \strong{Data structure}
 #' 
-#' The finite common atoms mixture model is used to perform inference in nested settings, where the data are organized into \eqn{J} groups. 
+#' The overfitted mixture common atoms model is used to perform inference in nested settings, where the data are organized into \eqn{J} groups. 
 #' The data should be continuous observations \eqn{(Y_1,\dots,Y_J)}, where each \eqn{Y_j = (y_{1,j},\dots,y_{n_j,j})} 
 #' contains the \eqn{n_j} observations from group \eqn{j}, for \eqn{j=1,\dots,J}. 
 #' The function takes as input the data as a numeric vector \code{y} in this concatenated form. Hence \code{y} should be a vector of length
@@ -68,16 +70,15 @@
 #' The model performs a clustering of both observations and groups. 
 #' The clustering of groups (distributional clustering) is provided by the allocation variables \eqn{S_j \in \{1,\dots,K\}}, with 
 #' \deqn{Pr(S_j = k \mid \dots ) = \pi_k  \qquad \text{for } \: k = 1,\dots,K.}
-#' The distribution of the probabilities is \eqn{(\pi_1,\dots,\pi_{K})\sim Dirichlet_K(\alpha/K,\dots,\alpha/K)}. 
-#' Moreover, the dimension \eqn{K} is random (see Frühwirth-Schnatter et al., 2021).
+#' The distribution of the probabilities is \eqn{(\pi_1,\dots,\pi_{K})\sim Dirichlet_K(\alpha,\dots,\alpha)}. 
 #' 
 #' The clustering of observations (observational clustering) is provided by the allocation variables \eqn{M_{i,j} \in \{1,\dots,L\}}, with
 #' \deqn{ Pr(M_{i,j} = l \mid S_j = k, \dots ) = \omega_{l,k} \qquad \text{for } \: k = 1,\dots,K \, ; \: l = 1,\dots,L. }
-#' The distribution of the probabilities is \eqn{(\omega_{1,k},\dots,\omega_{L,k})\sim Dirichlet_L(\beta/L,\dots,\beta/L)} for all \eqn{k = 1,\dots,K}. 
-#' Moreover, the dimension \eqn{L} is random (see Frühwirth-Schnatter et al., 2021).
+#' The distribution of the probabilities is \eqn{(\omega_{1,k},\dots,\omega_{L,k})\sim Dirichlet_L(\beta,\dots,\beta)} for all \eqn{k = 1,\dots,K}. 
 #'
 #'
-#' @return \code{sample_fSAN} returns four objects:
+#'
+#' @return \code{sample_fSAN_sparsemix} returns four objects:
 #' \itemize{
 #'   \item \code{model}: name of the fitted model.
 #'   \item \code{params}: list containing the data and the parameters used in the simulation. Details below.
@@ -93,8 +94,8 @@
 #' \item{\code{y, group}}{Data and group vectors.}
 #' \item{\code{maxK, maxL}}{Maximum number of distributional and observational clusters.}
 #' \item{\code{m0, tau0, lambda0, gamma0}}{Model hyperparameters.}
-#' \item{(\code{hyp_alpha1, hyp_alpha2, eps_alpha}) or \code{alpha}}{Either the hyperparameters on \eqn{\alpha} and MH step size (if \eqn{\alpha} random), or the value for \eqn{\alpha} (if fixed).}
-#' \item{(\code{hyp_beta1, hyp_beta2, eps_beta}) or \code{beta}}{Either the hyperparameters on \eqn{\beta} and MH step size (if \eqn{\beta} random), or the value for \eqn{\beta} (if fixed).}
+#' \item{(\code{hyp_alpha,eps_alpha}) or \code{alpha}}{Either the hyperparameter on \eqn{\alpha} and MH step size (if \eqn{\alpha} random), or the value for \eqn{\alpha} (if fixed).}
+#' \item{(\code{hyp_beta,eps_beta}) or \code{beta}}{Either the hyperparameter on \eqn{\beta} and MH step size (if \eqn{\beta} random), or the value for \eqn{\beta} (if fixed).}
 #' }
 #' 
 #' 
@@ -117,12 +118,7 @@
 #'    \eqn{(\omega_{1,k},\dots,\omega_{L,k})} for distributional cluster \eqn{k}. }
 #' \item{\code{alpha}}{Vector of length \code{nrep} of posterior samples of the parameter \eqn{\alpha}.}
 #' \item{\code{beta}}{Vector of length \code{nrep} of posterior samples of the parameter \eqn{\beta}.}
-#' \item{\code{K_plus}}{Vector of length \code{nrep} of posterior samples of the number of distributional clusters.}
-#' \item{\code{L_plus}}{Vector of length \code{nrep} of posterior samples of the number of observational clusters.}
-#' \item{\code{K}}{Vector of length \code{nrep} of posterior samples of the distributional Dirichlet dimension.}
-#' \item{\code{L}}{Vector of length \code{nrep} of posterior samples of the observational Dirichlet dimension.}
 #' }
-#'
 #'
 #' @examples 
 #' set.seed(123)
@@ -130,33 +126,32 @@
 #' g <- c(rep(1,30), rep(2, 30))
 #' plot(density(y[g==1]), xlim = c(-5,10))
 #' lines(density(y[g==2]), col = 2)
-#' out <- sample_fSAN(nrep = 500, y = y, group = g, 
-#'                    nclus_start = 2,
-#'                    maxK = 20, maxL = 20,
-#'                    alpha = 1, beta = 1)
+#' out <- sample_fSAN_sparsemix(nrep = 500, burn = 200, y = y, group = g, 
+#'                              nclus_start = 2,
+#'                              maxK = 20, maxL = 20,
+#'                              alpha = 0.01, beta = 0.01)
 #' out 
 #' 
 #' @references D’Angelo, L., Canale, A., Yu, Z., and Guindani, M. (2023). 
 #' Bayesian nonparametric analysis for the detection of spikes in noisy calcium imaging data. \emph{Biometrics}, 79(2), 1370–1382. <doi:10.1111/biom.13626>
 #' 
-#' Frühwirth-Schnatter, S., Malsiner-Walli, G. and Grün, B. (2021).
-#' Generalized mixtures of finite mixtures and telescoping sampling. \emph{Bayesian Analysis}, 16(4), 1279–1307. <doi:10.1214/21-BA1294>
+#' Malsiner-Walli, G., Frühwirth-Schnatter, S. and Grün, B. (2016). 
+#' Model-based clustering based on sparse finite Gaussian mixtures. Statistics and Computing 26, 303–324. <doi:10.1007/s11222-014-9500-2>
 #'
-#' @export sample_fSAN
+#' @export sample_fSAN_sparsemix
 #' @importFrom stats cor var dist hclust cutree rgamma 
-sample_fSAN <- function(nrep, y, group, 
-                       maxK = 50, maxL = 50, 
-                       m0 = 0, tau0 = 0.1, lambda0 = 3, gamma0 = 2,
-                       hyp_alpha1 = 6, hyp_alpha2 = 3, 
-                       hyp_beta1 = 6, hyp_beta2 = 3, 
-                       eps_alpha = NULL, eps_beta = NULL,
-                       alpha = NULL, beta = NULL,
-                       warmstart = TRUE, nclus_start = NULL,
-                       mu_start = NULL, sigma2_start = NULL,
-                       M_start = NULL, S_start = NULL,
-                       alpha_start = NULL, beta_start = NULL,
-                       progress = TRUE,
-                       seed = NULL)
+sample_fSAN_sparsemix <- function(nrep, burn, y, group, 
+                                  maxK = 50, maxL = 50, 
+                                  m0 = 0, tau0 = 0.1, lambda0 = 3, gamma0 = 2,
+                                  hyp_alpha = 10, hyp_beta = 10, 
+                                  eps_alpha = NULL, eps_beta = NULL,
+                                  alpha = NULL, beta = NULL,
+                                  warmstart = TRUE, nclus_start = NULL,
+                                  mu_start = NULL, sigma2_start = NULL, 
+                                  M_start = NULL, S_start = NULL,
+                                  alpha_start = NULL, beta_start = NULL,
+                                  progress = TRUE,
+                                  seed = NULL)
 {
   group <- .relabell(group) - 1 
   
@@ -164,20 +159,18 @@ sample_fSAN <- function(nrep, y, group,
   set.seed(seed)
   
   params <- list(nrep = nrep, 
-                y = y,
-                group = group+1, 
-                maxK = maxK, 
-                maxL = maxL, 
-                m0 = m0, tau0 = tau0,
-                lambda0 = lambda0, gamma0 = gamma0,
-                seed = seed)
+                 y = y,
+                 group = group+1, 
+                 maxK = maxK, 
+                 maxL = maxL, 
+                 m0 = m0, tau0 = tau0,
+                 lambda0 = lambda0, gamma0 = gamma0,
+                 seed = seed)
   
   if(!is.null(alpha)) { params$alpha <- alpha }
   if(!is.null(beta)) { params$beta <- beta }
-  if(is.null(alpha)) { params$hyp_alpha1 <- hyp_alpha1 }
-  if(is.null(alpha)) { params$hyp_alpha2 <- hyp_alpha2 }
-  if(is.null(beta)) { params$hyp_beta1 <- hyp_beta1 }
-  if(is.null(beta)) { params$hyp_beta2 <- hyp_beta2 }
+  if(is.null(alpha)) { params$hyp_alpha <- hyp_alpha }
+  if(is.null(beta)) { params$hyp_beta <- hyp_beta }
   
   if(is.null(S_start)) { S_start <- rep(0,length(unique(group))) }
   
@@ -213,7 +206,7 @@ sample_fSAN <- function(nrep, y, group,
       mu_start[1] <- mean(y)
       sigma2_start <- rep(0.001, maxL)
       sigma2_start[1] <- var(y)/2
-      }
+    }
     
     # if the initial cluster allocation is not passed
     # and you want a warmstart
@@ -221,11 +214,11 @@ sample_fSAN <- function(nrep, y, group,
       mu_start <- rep(0,maxL)
       sigma2_start <- rep(0.001,maxL)
       
-      if(is.null(nclus_start)) { nclus_start = min(c(maxL, 30))}
+      if(is.null(nclus_start)) { nclus_start <- min(c(maxL, 30))}
       M_start <- stats::kmeans(y,
-                              centers = nclus_start, 
-                              algorithm="MacQueen",
-                              iter.max = 50)$cluster 
+                               centers = nclus_start, 
+                               algorithm="MacQueen",
+                               iter.max = 50)$cluster 
       
       nclus_start <- length(unique(M_start))
       mu_start[1:nclus_start] <- sapply(1:nclus_start, function(x) mean(y[M_start == x])) 
@@ -237,74 +230,50 @@ sample_fSAN <- function(nrep, y, group,
   M_start <- M_start-1
   sigma2_start[is.na(sigma2_start)] <- 0.001
   
-  if(is.null(alpha_start)) { alpha_start <- rgamma(1, hyp_alpha1, hyp_alpha2) }
-  if(is.null(beta_start)) { beta_start <- rgamma(1, hyp_beta1, hyp_beta2) }
+  if(is.null(alpha_start)) { alpha_start <- rgamma(1, hyp_alpha, hyp_alpha*maxK) }
+  if(is.null(beta_start)) { beta_start <- rgamma(1, hyp_beta, hyp_beta*maxL) }
   
   fixed_alpha <- F
   fixed_beta <- F
+
   if(!is.null(alpha) ) {
-    fixed_alpha <- T ; eps_alpha <- 1 } else { alpha <- 1 }
+    fixed_alpha <- T ; 
+    alpha_start <- alpha
+    eps_alpha <- 1
+  } else { alpha <- 1 }
+
   if(!is.null(beta) ) {
-    fixed_beta <- T ; eps_beta <- 1 } else { beta <- 1 }
+    beta_start <- beta
+    fixed_beta <- T ; 
+    eps_beta <- 1
+  } else { beta <- 1 }
   
   if((fixed_alpha == F)&(is.null(eps_alpha))) {stop("Missing eps parameter for MH step on alpha. Please provide 'eps_alpha' or a fixed 'alpha' value.")}
   if((fixed_beta == F)&(is.null(eps_beta))) {stop("Missing eps parameter for MH step on beta Please provide 'eps_beta' or a fixed 'beta' value.")}
-  
+
   start <- Sys.time()
-  out <- sample_fcam_arma(nrep, y, group,
-                         maxK, maxL,
-                         m0, tau0,
-                         lambda0, gamma0,
-                         fixed_alpha, fixed_beta,
-                         alpha, beta,
-                         hyp_alpha1, hyp_alpha2,
-                         hyp_beta1, hyp_beta2,
-                         mu_start, sigma2_start,
-                         M_start, S_start,
-                         alpha_start, beta_start,
-                         eps_alpha, eps_beta,
-                         progress)
+  out <- sample_overcam_burn(nrep, burn, y, group, 
+                             maxK, maxL, 
+                             m0, tau0, 
+                             lambda0, gamma0,
+                             fixed_alpha, fixed_beta,
+                             alpha, beta,
+                             hyp_alpha, hyp_beta,
+                             mu_start, sigma2_start,
+                             M_start, S_start, 
+                             alpha_start, beta_start,
+                             eps_alpha, eps_beta,
+                             progress)
   end <- Sys.time()
   
-  warnings <- out$warnings
-  out[13] <- NULL
+  out$distr_cluster <- (out$distr_cluster + 1)
+  out$obs_cluster <- (out$obs_cluster + 1)
   
-  out$distr_cluster <- out$distr_cluster + 1
-  out$obs_cluster <- out$obs_cluster + 1
-  
-  
-  if(length(warnings) == 2) {
-    output <- list( "model" = "fSAN",
-                   "params" = params,
-                   "sim" = out,
-                   "time" = end - start,
-                   "warnings" = warnings)
-    warning("Increase maxL and maxK: all the provided mixture components were used. Check $warnings to see when it happened.")
-  } else if (length(warnings) == 1) {
-    if((length(warnings$top_maxK)>0) & (length(warnings$top_maxL)==0)) {
-      output <- list( "model" = "fSAN",
-                     "params" = params,
-                     "sim" = out,
-                     "time" = end - start,
-                     "warnings" = warnings)
-      warning("Increase maxK: all the provided distributional mixture components were used. Check '$warnings' to see when it happened.")
-    }
-    
-    if((length(warnings$top_maxK)==0) & (length(warnings$top_maxL)>0)) {
-      output <- list( "model" = "fSAN",
-                     "params" = params,
-                     "sim" = out,
-                     "time" = end - start,
-                     "warnings" = warnings)
-      warning("Increase maxL: all the provided observational mixture components were used. Check '$warnings' to see when it happened.")
-    }
-  } else {
-    output <- list( "model" = "fSAN",
-                   "params" = params,
-                   "sim" = out,
-                   "time" = end - start )
-  }
+  output <- list( "model" = "fSAN_sparsemix",
+                  "params" = params,
+                  "sim" = out,
+                  "time" = end - start)
   
   structure(output, class = c("SANmcmc",class(output)))
-
+  
 }

@@ -4,7 +4,7 @@
 \name{SANple-package}
 \alias{SANple}
 \alias{SANple-package}
-\title{SANple: Fitting Common and Shared Atoms Nested Models via MCMC}
+\title{SANple: Fitting Shared Atoms Nested Models via Markov Chains Monte Carlo}
 \description{
 Estimate Bayesian nested mixture models via Markov Chain Monte Carlo methods. Specifically, the package implements the common atoms model (Denti et al., 2023), its finite version (D'Angelo et al., 2023), and a hybrid finite-infinite model. All models use Gaussian mixtures with a normal-inverse-gamma prior distribution on the parameters. Additional functions are provided to help analyzing the results of the fitting procedure. References: Denti, Camerlenghi, Guindani, Mira (2023) \doi{10.1080/01621459.2021.1933499}, D’Angelo, Canale, Yu, Guindani (2023) \doi{10.1111/biom.13626}.
 }
@@ -17,11 +17,11 @@ Useful links:
 
 }
 \author{
-\strong{Maintainer}: Laura D'Angelo \email{laura.dangelo@live.com} (\href{https://orcid.org/0000-0001-5034-7414}{ORCID}) [copyright holder]
+\strong{Maintainer}: Francesco Denti \email{francescodenti.personal@gmail.com} (\href{https://orcid.org/0000-0003-2978-4702}{ORCID})
 
 Authors:
 \itemize{
-  \item Francesco Denti \email{francescodenti.personal@gmail.com} (\href{https://orcid.org/0000-0003-2978-4702}{ORCID})
+  \item Laura D'Angelo \email{laura.dangelo@live.com} (\href{https://orcid.org/0000-0001-5034-7414}{ORCID}) [copyright holder]
 }
 
 }
